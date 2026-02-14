@@ -1,0 +1,23 @@
+html, body {
+    background: transparent !important;
+    background-color: transparent !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 100%;
+    width: 100%;
+    overflow: hidden !important;
+}
+
+#__next {
+    background: transparent !important;
+    background-color: transparent !important;
+    height: 100%;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    body {
+        overflow: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+}

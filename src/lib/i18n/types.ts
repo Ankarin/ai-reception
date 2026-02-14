@@ -1,0 +1,216 @@
+export type Locale = "en" | "uk";
+
+export const defaultLocale: Locale = "en";
+
+export interface Dictionary {
+  common: {
+    save: string;
+    saving: string;
+    cancel: string;
+    delete: string;
+    edit: string;
+    reset: string;
+    remove: string;
+    previous: string;
+    next: string;
+    active: string;
+    inactive: string;
+    close: string;
+  };
+  sidebar: {
+    promptWidget: string;
+    analytics: string;
+    services: string;
+    bookings: string;
+    chats: string;
+    filters: string;
+    search: string;
+    searchPlaceholder: string;
+    sortBy: string;
+    lastActivity: string;
+    createdDate: string;
+    itemsPerPage: string;
+  };
+  dashboard: {
+    orgNotFound: string;
+    title: string;
+    subtitle: string;
+    tabs: {
+      prompt: string;
+      colors: string;
+      logo: string;
+      texts: string;
+      quickReplies: string;
+      proactive: string;
+    };
+  };
+  customizer: {
+    systemPrompt: {
+      title: string;
+      description: string;
+      label: string;
+      placeholder: string;
+      hint: string;
+      saveButton: string;
+      savingButton: string;
+      saveSuccess: string;
+      saveError: string;
+    };
+    colors: {
+      title: string;
+      description: string;
+      primaryColor: string;
+      backgroundColor: string;
+      secondaryColor: string;
+      textPrimaryColor: string;
+      textSecondaryColor: string;
+      borderColor: string;
+    };
+    logo: {
+      title: string;
+      description: string;
+      uploadLabel: string;
+      uploadHint: string;
+      preview: string;
+      removeButton: string;
+      pendingUpload: string;
+      width: string;
+      height: string;
+      borderRadius: string;
+      removeSuccess: string;
+      removeError: string;
+      uploadError: string;
+    };
+    texts: {
+      title: string;
+      description: string;
+      headerTitle: string;
+      headerTitlePlaceholder: string;
+      headerTitleHint: string;
+      inputPlaceholder: string;
+      initialMessage: string;
+      initialMessageHint: string;
+    };
+    quickReplies: {
+      title: string;
+      description: string;
+      enableLabel: string;
+      enableHint: string;
+      addButton: string;
+      hint: string;
+      optionPlaceholder: string;
+    };
+    proactive: {
+      title: string;
+      description: string;
+      timeBasedTrigger: string;
+      timeBasedTriggerHint: string;
+      triggerAfter: string;
+    };
+    resetToDefaults: string;
+    saveChanges: string;
+    resetDialog: {
+      title: string;
+      description: string;
+    };
+    removeLogoDialog: {
+      title: string;
+      description: string;
+    };
+    saveSuccess: string;
+    saveError: string;
+    resetSuccess: string;
+    resetError: string;
+  };
+  services: {
+    title: string;
+    subtitle: string;
+    addService: string;
+    addFirstService: string;
+    noServices: string;
+    noServicesHint: string;
+    editService: string;
+    serviceName: string;
+    serviceNamePlaceholder: string;
+    description: string;
+    descriptionPlaceholder: string;
+    price: string;
+    duration: string;
+    updateService: string;
+    createService: string;
+    min: string;
+    serviceUpdated: string;
+    serviceCreated: string;
+    saveFailed: string;
+    deleteConfirm: string;
+    serviceDeleted: string;
+    deleteFailed: string;
+    serviceActivated: string;
+    serviceDeactivated: string;
+  };
+  bookings: {
+    title: string;
+    subtitle: string;
+    addBooking: string;
+    allStatuses: string;
+    confirmed: string;
+    completed: string;
+    cancelled: string;
+    noShow: string;
+    noBookings: string;
+    noStatusBookings: string;
+    noBookingsYet: string;
+    complete: string;
+    cancel: string;
+    reconfirm: string;
+    newBooking: string;
+    patientName: string;
+    patientNamePlaceholder: string;
+    phone: string;
+    phonePlaceholder: string;
+    email: string;
+    emailPlaceholder: string;
+    service: string;
+    selectService: string;
+    date: string;
+    time: string;
+    notes: string;
+    notesPlaceholder: string;
+    createBooking: string;
+    bookingCreated: string;
+    createFailed: string;
+    bookingStatus: string;
+    updateFailed: string;
+    source: string;
+  };
+  chats: {
+    noChats: string;
+    noChatsSearch: string;
+    noConversations: string;
+    noMessages: string;
+    noTextContent: string;
+    anonymousUser: string;
+    customer: string;
+    agent: string;
+    messageCount: string;
+    messagesCount: string;
+    justNow: string;
+    minutesAgo: string;
+    hoursAgo: string;
+    daysAgo: string;
+    showing: string;
+  };
+  analytics: {
+    noData: string;
+    title: string;
+    subtitle: string;
+    totalChats: string;
+    messagesTotal: string;
+  };
+  widget: {
+    startNewChat: string;
+    close: string;
+    companyLogo: string;
+    poweredBy: string;
+  };
+}

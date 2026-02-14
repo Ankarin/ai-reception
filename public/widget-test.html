@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Receptionist Widget Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #171717;
+        }
+        .content {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        code {
+            background: #e5e5e5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        pre {
+            background: #1a1a1a;
+            color: #f5f5f5;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Receptionist Widget Test Page</h1>
+
+    <div class="content">
+        <h2>Testing the Widget</h2>
+        <p>The chat widget should appear in the bottom-right corner of this page.</p>
+        <p>Click the chat button to open the widget.</p>
+    </div>
+
+    <div class="content">
+        <h2>Test Scenarios</h2>
+        <ul>
+            <li>Widget button appears (80x80px, rounded)</li>
+            <li>Button uses custom colors from API</li>
+            <li>Click button → iframe opens</li>
+            <li>Chat loads in embedded mode</li>
+            <li>Close button in chat → iframe closes, button reappears</li>
+        </ul>
+    </div>
+
+    <div class="content">
+        <h2>Integration Code Example</h2>
+        <pre>&lt;script&gt;
+  window.ChatConfig = {
+    orgId: 'your_org_id_here',
+    // Optional: for authenticated users
+    // jwt: 'user_jwt_token'
+  };
+&lt;/script&gt;
+&lt;script src="http://localhost:3000/widget.js"&gt;&lt;/script&gt;</pre>
+    </div>
+
+    <div class="content">
+        <h2>Lorem Ipsum (for scrolling test)</h2>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+        <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+    </div>
+
+    <!-- Configuration must come before the widget script -->
+    <script>
+        window.ChatConfig = {
+            orgId: 'org_37Np1aXBloKT5Y3H3ga8fG3T9RY',
+            baseUrl: 'http://localhost:3000'
+        };
+    </script>
+    <script src="/widget.js"></script>
+</body>
+</html>
