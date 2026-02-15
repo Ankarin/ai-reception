@@ -37,6 +37,7 @@ export function createChatTools(
   chatId: string,
   organizationId: string,
   schoolId?: number,
+  bookingSource: "chat" | "telegram" | "email" = "chat",
 ): ChatTools {
   return {
     listServices: tool({
@@ -289,7 +290,7 @@ export function createChatTools(
               date: normalizedDate,
               time: normalizedTime,
               notes: finalNotes,
-              source: "chat",
+              source: bookingSource,
               chatId: bookingChatId,
             })
             .returning();

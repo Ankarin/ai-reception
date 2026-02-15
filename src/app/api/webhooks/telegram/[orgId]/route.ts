@@ -127,7 +127,7 @@ IMPORTANT INSTRUCTIONS — you MUST follow these:
     const newUserMessage: CoreMessage = { role: "user", content: userText };
     const allMessages = [...history, newUserMessage];
 
-    const tools = createChatTools(chat.id, orgId);
+    const tools = createChatTools(chat.id, orgId, undefined, "telegram");
 
     const result = await generateText({
       model: "google/gemini-3-flash",

@@ -222,7 +222,7 @@ export const POST = async (req: NextRequest) => {
 
     const customPrompt =
       typeof organization.prompt === "string" ? organization.prompt : null;
-    const tools = createChatTools(actualChatId, organization.id, 2);
+    const tools = createChatTools(actualChatId, organization.id, 2, "chat");
 
     const basePrompt =
       customPrompt ||

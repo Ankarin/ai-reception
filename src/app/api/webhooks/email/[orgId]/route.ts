@@ -10,10 +10,73 @@ import {
 } from "@/lib/utils/integration-settings";
 import { unauthorizedResponse } from "@/lib/utils/webhook-auth";
 
+type InboundEmail = {
+  text: string | null;
+  from: string;
+  to: string;
+  subject: string;
+  messageId: string | null;
+  inReplyTo: string | null;
+  references: string | null;
+};
+
+function asString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function asNullableString(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function asRecipientString(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => (typeof entry === "string" ? entry : ""))
+      .filter(Boolean)
+      .join(", ");
+  }
+  return "";
+}
+
+function extractFirstEmail(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+
+  const match = raw.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  return match ? match[0].toLowerCase() : null;
+}
+
+function normalizeReplySubject(subject: string): string {
+  const clean = subject.trim();
+  if (!clean) return "Re: Ваш запит до клініки";
+  return /^re:/i.test(clean) ? clean : `Re: ${clean}`;
+}
+
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderReplyHtml(text: string): string {
+  const escaped = escapeHtml(text);
+  const withBold = escaped.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  const withLineBreaks = withBold.replace(/\n/g, "<br />");
+
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.55; color: #111827; font-size: 15px;">
+      ${withLineBreaks}
+    </div>
+  `.trim();
+}
+
 async function fetchResendEmailBody(
   emailId: string,
   apiKey: string,
-): Promise<{ text: string | null; from: string; subject: string } | null> {
+): Promise<InboundEmail | null> {
   if (!apiKey) return null;
 
   const res = await fetch(
@@ -33,8 +96,56 @@ async function fetchResendEmailBody(
   const data = await res.json();
   return {
     text: data.text || data.html || null,
-    from: data.from || "",
-    subject: data.subject || "",
+    from: asString(data.from),
+    to: asRecipientString(data.to),
+    subject: asString(data.subject),
+    messageId: asNullableString(data.message_id) || asNullableString(data.id),
+    inReplyTo: asNullableString(data.in_reply_to),
+    references: asNullableString(data.references),
+  };
+}
+
+async function sendResendReply(params: {
+  apiKey: string;
+  from: string;
+  to: string;
+  subject: string;
+  text: string;
+  inReplyTo?: string | null;
+  references?: string | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const headers: Record<string, string> = {};
+  if (params.inReplyTo) {
+    headers["In-Reply-To"] = params.inReplyTo;
+  }
+  if (params.references) {
+    headers.References = params.references;
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${params.apiKey}`,
+    },
+    body: JSON.stringify({
+      from: params.from,
+      to: [params.to],
+      subject: normalizeReplySubject(params.subject),
+      text: params.text,
+      html: renderReplyHtml(params.text),
+      ...(Object.keys(headers).length > 0 ? { headers } : {}),
+    }),
+  });
+
+  if (response.ok) {
+    return { ok: true };
+  }
+
+  const raw = await response.text().catch(() => "");
+  return {
+    ok: false,
+    error: `Resend send failed: ${response.status} ${response.statusText}${raw ? ` | ${raw}` : ""}`,
   };
 }
 
@@ -58,14 +169,9 @@ export async function POST(
   try {
     const body = await request.json();
 
-    let from: string;
-    let subject: string;
-    let textBody: string | null;
+    let inbound: InboundEmail;
 
     if (body.type === "email.received" && body.data?.email_id) {
-      from = body.data.from || "";
-      subject = body.data.subject || "";
-
       if (!resendApiKey) {
         console.log(`[Email Webhook] No Resend API key for org ${orgId}`);
         return NextResponse.json({
@@ -84,15 +190,35 @@ export async function POST(
           message: "No email body to process",
         });
       }
-      textBody = fullEmail.text;
+      inbound = {
+        text: fullEmail.text,
+        from: fullEmail.from || asString(body.data.from),
+        to: fullEmail.to || asRecipientString(body.data.to),
+        subject: fullEmail.subject || asString(body.data.subject),
+        messageId:
+          fullEmail.messageId ||
+          asNullableString(body.data.message_id) ||
+          asNullableString(body.data.email_id),
+        inReplyTo: fullEmail.inReplyTo || asNullableString(body.data.in_reply_to),
+        references: fullEmail.references || asNullableString(body.data.references),
+      };
     } else {
-      from = body.from || body.From || "";
-      subject = body.subject || body.Subject || "";
-      textBody =
-        body.text_body || body.TextBody || body.text || body.plain || null;
+      inbound = {
+        from: asString(body.from || body.From),
+        to: asRecipientString(body.to || body.To || body.recipient || body.Recipient),
+        subject: asString(body.subject || body.Subject),
+        text:
+          asNullableString(body.text_body || body.TextBody) ||
+          asNullableString(body.text || body.plain),
+        messageId:
+          asNullableString(body.message_id || body.MessageID || body.messageId),
+        inReplyTo:
+          asNullableString(body.in_reply_to || body.InReplyTo || body.inReplyTo),
+        references: asNullableString(body.references || body.References),
+      };
     }
 
-    if (!textBody) {
+    if (!inbound.text) {
       return NextResponse.json({ success: true, message: "No text body" });
     }
 
@@ -101,26 +227,78 @@ export async function POST(
     });
 
     const now = new Date();
-    const timeContext = `Current date and time: ${now.toISOString()} (${now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}, ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}). Use this to understand relative dates like "today", "tomorrow", "next Monday", etc.`;
-    const systemPrompt = `${org?.prompt || "You are a friendly and professional AI receptionist."}\n\n${timeContext}\n\nYou are processing an inbound email. Sender: ${from}. Subject: ${subject}. If the email contains a booking request, use the createBooking tool. If they ask about services, use listServices. Extract relevant information from the email.`;
+    const toolInstructions = `
+IMPORTANT INSTRUCTIONS — you MUST follow these:
+- Current date and time: ${now.toISOString()} (${now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}, ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}). Use this to understand relative dates like "today", "tomorrow", "next Monday", etc.
+- You have tools available: listServices, checkAvailability, createBooking, lookupBooking, updateBooking. You MUST use them — never pretend to do something without calling the actual tool.
+- To book an appointment: collect patient's full name, phone number, preferred date/time and service, then call checkAvailability, then call createBooking. Do NOT say a booking is made unless createBooking returned success.
+- For createBooking arguments, use: patientName, patientPhone, date, time, and optional serviceId (or serviceName) and notes.
+- To look up a booking: ALWAYS ask for both the patient's name AND phone number. Pass both to lookupBooking.
+- To reschedule: call lookupBooking first, then call updateBooking with action "reschedule".
+- To cancel: call lookupBooking first, then call updateBooking with action "cancel".
+- NEVER hallucinate or fabricate booking confirmations.
+- Write the final answer as an email reply: concise, clear, and polite.`;
+    const systemPrompt = `${org?.prompt || "You are a friendly and professional AI receptionist."}\n${toolInstructions}\n\nEmail context:\n- Sender: ${inbound.from}\n- Subject: ${inbound.subject}`;
 
     const chatId = `email-${Date.now()}`;
-    const tools = createChatTools(chatId, orgId);
+    const tools = createChatTools(chatId, orgId, undefined, "email");
 
     const result = await generateText({
       model: "google/gemini-3-flash",
       system: systemPrompt,
-      messages: [{ role: "user", content: textBody }],
+      messages: [{ role: "user", content: inbound.text }],
       tools,
       stopWhen: stepCountIs(5),
     });
 
-    console.log(`[Email Webhook] Org ${orgId} | Processed email from ${from}: ${subject}`);
+    const replyText =
+      result.text?.trim() ||
+      "Дякуємо за ваше звернення. Ми отримали лист і повернемося з деталями найближчим часом.";
+
+    const senderEmail = extractFirstEmail(inbound.from);
+    const replyFromEmail =
+      extractFirstEmail(inbound.to) ||
+      extractFirstEmail(process.env.RESEND_FROM_EMAIL) ||
+      null;
+
+    let replySent = false;
+    let replyError: string | null = null;
+
+    if (!resendApiKey) {
+      replyError = "Resend API key is missing";
+    } else if (!senderEmail) {
+      replyError = `Unable to parse sender email from "${inbound.from}"`;
+    } else if (!replyFromEmail) {
+      replyError =
+        "Unable to determine sender address for reply. Configure RESEND_FROM_EMAIL or ensure inbound 'to' address is present.";
+    } else {
+      const sendResult = await sendResendReply({
+        apiKey: resendApiKey,
+        from: replyFromEmail,
+        to: senderEmail,
+        subject: inbound.subject,
+        text: replyText,
+        inReplyTo: inbound.messageId || inbound.inReplyTo,
+        references: inbound.references || inbound.messageId,
+      });
+      replySent = sendResult.ok;
+      replyError = sendResult.error || null;
+    }
+
+    if (replyError) {
+      console.error(`[Email Webhook] Reply error for org ${orgId}: ${replyError}`);
+    }
+
+    console.log(
+      `[Email Webhook] Org ${orgId} | Processed email from ${inbound.from}: ${inbound.subject} | replySent=${replySent}`,
+    );
     return NextResponse.json({
       success: true,
-      response: result.text,
-      from,
-      subject,
+      response: replyText,
+      from: inbound.from,
+      subject: inbound.subject,
+      replySent,
+      replyError,
     });
   } catch (error) {
     console.error("[Email Webhook] Error:", error);
