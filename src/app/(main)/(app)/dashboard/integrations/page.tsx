@@ -32,6 +32,11 @@ function useBaseUrl() {
   return window.location.origin;
 }
 
+function withWebhookSecret(url: string, secret: string) {
+  if (!secret) return url;
+  return `${url}?secret=${encodeURIComponent(secret)}`;
+}
+
 function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
   const t = useT();
@@ -289,10 +294,22 @@ export default function IntegrationsPage() {
   const telegramWebhookUrl = `${baseUrl}/api/webhooks/telegram/${orgId}`;
   const emailWebhookUrl = `${baseUrl}/api/webhooks/email/${orgId}`;
   const elevenlabsWebhookUrl = `${baseUrl}/api/webhooks/elevenlabs/${orgId}`;
+  const telegramWebhookUrlWithSecret = withWebhookSecret(
+    telegramWebhookUrl,
+    webhookSecret,
+  );
+  const emailWebhookUrlWithSecret = withWebhookSecret(
+    emailWebhookUrl,
+    webhookSecret,
+  );
+  const elevenlabsWebhookUrlWithSecret = withWebhookSecret(
+    elevenlabsWebhookUrl,
+    webhookSecret,
+  );
 
   const setWebhookCurl = `curl -X POST "https://api.telegram.org/bot${telegramBotToken || "<YOUR_BOT_TOKEN>"}/setWebhook" \\
   -H "Content-Type: application/json" \\
-  -d '{"url": "${telegramWebhookUrl}?secret=${webhookSecret || "<YOUR_WEBHOOK_SECRET>"}"}'`;
+  -d '{"url": "${telegramWebhookUrlWithSecret || "<YOUR_TELEGRAM_WEBHOOK_URL_WITH_SECRET>"}"}'`;
 
   const elevenlabsPayload = `{
   "call_id": "abc123",
@@ -426,7 +443,7 @@ export default function IntegrationsPage() {
           title={t.integrations.telegram.step3}
           detail={t.integrations.telegram.step3Detail}
         >
-          <WebhookUrlDisplay url={telegramWebhookUrl} label={t.integrations.webhookUrl} />
+          <WebhookUrlDisplay url={telegramWebhookUrlWithSecret} label={t.integrations.webhookUrl} />
           <div className="space-y-1.5 mt-3">
             <p className="text-sm font-medium text-muted-foreground">
               {t.integrations.telegram.setWebhookCommand}
@@ -481,7 +498,7 @@ export default function IntegrationsPage() {
           title={t.integrations.email.step3}
           detail={t.integrations.email.step3Detail}
         >
-          <WebhookUrlDisplay url={emailWebhookUrl} label={t.integrations.webhookUrl} />
+          <WebhookUrlDisplay url={emailWebhookUrlWithSecret} label={t.integrations.webhookUrl} />
         </StepBlock>
       </IntegrationCard>
 
@@ -515,7 +532,7 @@ export default function IntegrationsPage() {
           title={t.integrations.elevenlabs.step2}
           detail={t.integrations.elevenlabs.step2Detail}
         >
-          <WebhookUrlDisplay url={elevenlabsWebhookUrl} label={t.integrations.webhookUrl} />
+          <WebhookUrlDisplay url={elevenlabsWebhookUrlWithSecret} label={t.integrations.webhookUrl} />
         </StepBlock>
 
         <StepBlock
