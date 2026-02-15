@@ -85,7 +85,7 @@ export async function POST(
       await sendTelegramMessage(
         botToken,
         telegramChatId,
-        "Hi! I'm the AI receptionist. I can help you with:\n\n- View our services and pricing\n- Check appointment availability\n- Book an appointment\n- Look up your existing bookings\n\nHow can I help you today?",
+        "Привіт! Я AI-рецепціоніст клініки. Я можу допомогти вам з:\n\n- Переліком послуг та цінами\n- Перевіркою вільного часу для запису\n- Записом на прийом\n- Пошуком ваших існуючих записів\n\nЧим можу допомогти вам сьогодні?",
       );
       return NextResponse.json({ ok: true });
     }

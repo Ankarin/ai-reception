@@ -18,6 +18,72 @@ import { createCORSResponse, createCORSStreamResponse } from "@/lib/utils/cors";
 
 const MAX_MESSAGES_IN_MEMORY = 20;
 
+function toTextFromLegacyContent(content: unknown): string {
+  if (typeof content === "string") {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (
+          part &&
+          typeof part === "object" &&
+          "type" in part &&
+          (part as { type?: string }).type === "text" &&
+          "text" in part &&
+          typeof (part as { text?: unknown }).text === "string"
+        ) {
+          return (part as { text: string }).text;
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  return "";
+}
+
+function normalizeToUIMessage(
+  rawMessage: unknown,
+  fallbackId: string,
+): UIMessage | null {
+  if (!rawMessage || typeof rawMessage !== "object") {
+    return null;
+  }
+
+  const candidate = rawMessage as Record<string, unknown>;
+  const role =
+    candidate.role === "assistant" || candidate.role === "user"
+      ? candidate.role
+      : null;
+
+  if (!role) {
+    return null;
+  }
+
+  if (Array.isArray(candidate.parts)) {
+    return {
+      id: typeof candidate.id === "string" ? candidate.id : fallbackId,
+      role,
+      parts: candidate.parts as UIMessage["parts"],
+    };
+  }
+
+  const legacyText = toTextFromLegacyContent(candidate.content);
+  if (!legacyText) {
+    return null;
+  }
+
+  return {
+    id: typeof candidate.id === "string" ? candidate.id : fallbackId,
+    role,
+    parts: [{ type: "text", text: legacyText }],
+  } as UIMessage;
+}
+
 export const GET = async () => {
   return createCORSResponse({ status: "ok", message: "Chat API is running" });
 };
@@ -137,14 +203,22 @@ export const POST = async (req: NextRequest) => {
         404,
       );
     }
-    const allMessages = (chat.messages as UIMessage[]) || [];
+    const allMessagesRaw = Array.isArray(chat.messages) ? chat.messages : [];
+    const allMessages = allMessagesRaw
+      .map((rawMessage, idx) =>
+        normalizeToUIMessage(rawMessage, `legacy-${actualChatId}-${idx}`),
+      )
+      .filter((message): message is UIMessage => Boolean(message));
+
+    const normalizedIncomingMessage =
+      normalizeToUIMessage(message, `incoming-${Date.now()}`) || message;
 
     const history =
       allMessages.length > MAX_MESSAGES_IN_MEMORY
         ? allMessages.slice(-MAX_MESSAGES_IN_MEMORY)
         : allMessages;
 
-    const messages = [...history, message];
+    const messages = [...history, normalizedIncomingMessage];
 
     const customPrompt =
       typeof organization.prompt === "string" ? organization.prompt : null;
