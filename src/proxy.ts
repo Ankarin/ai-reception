@@ -27,13 +27,14 @@ const isPublicRoute = createRouteMatcher([
   "/iframe-test(.*)",
 ]);
 const isCronRoute = createRouteMatcher(["/api/cron/(.*)"]);
+const isWebhookRoute = createRouteMatcher(["/api/webhooks/(.*)"]);
 const isOrgRoute = createRouteMatcher([
   "/:orgId/dashboard(.*)",
   "/:orgId/widget-settings(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-  if (isCronRoute(req)) {
+  if (isCronRoute(req) || isWebhookRoute(req)) {
     return NextResponse.next();
   }
 
