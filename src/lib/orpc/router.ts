@@ -1,6 +1,7 @@
 import * as analytics from "./procedures/analytics";
 import * as bookings from "./procedures/bookings";
 import * as chats from "./procedures/chats";
+import * as integrations from "./procedures/integrations";
 import * as organizations from "./procedures/organizations";
 import * as services from "./procedures/services";
 import * as uploads from "./procedures/uploads";
@@ -34,6 +35,10 @@ export const router = {
     list: bookings.getBookings,
     create: bookings.createBooking,
     update: bookings.updateBooking,
+  },
+  integrations: {
+    get: integrations.getIntegrationSettings,
+    update: integrations.updateIntegrationSettings,
   },
 };
 

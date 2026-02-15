@@ -31,29 +31,22 @@ export const POST = async (req: NextRequest) => {
   const timings: Record<string, number | boolean> = {};
 
   try {
-    const authHeader = req.headers.get('authorization');
+    const authHeader = req.headers.get("authorization");
     let jwtPayload: any = null;
 
-    if (authHeader?.startsWith('Bearer ')) {
+    if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.substring(7);
       try {
-        jwtPayload = JSON.parse(atob(token.split('.')[1]));
+        jwtPayload = JSON.parse(atob(token.split(".")[1]));
       } catch (e) {
-        console.warn('⚠️ [Chat API] Failed to decode JWT:', e);
+        console.warn("⚠️ [Chat API] Failed to decode JWT:", e);
       }
     }
 
     const body = await req.json();
     timings.bodyParse = performance.now() - startTime;
 
-    const {
-      message,
-      id,
-      orgId,
-      customerName,
-      isTest,
-      createOnly,
-    } = body as {
+    const { message, id, orgId, customerName, isTest, createOnly } = body as {
       message: UIMessage;
       id: string;
       orgId?: string;
@@ -93,17 +86,20 @@ export const POST = async (req: NextRequest) => {
 
       // Run org fetch and chat insert in parallel for faster first message
       const [insertResult, fetchedOrg] = await Promise.all([
-        db.insert(chats).values({
-          id: actualChatId,
-          organizationId: orgId,
-          messages: [],
-          customerName: customerName || jwtPayload?.name || null,
-          isTest: isTest ? 1 : 0,
-        }).catch((err) => {
-          // FK constraint will fail if org doesn't exist
-          console.error("❌ [Chat API] Insert failed:", err);
-          return null;
-        }),
+        db
+          .insert(chats)
+          .values({
+            id: actualChatId,
+            organizationId: orgId,
+            messages: [],
+            customerName: customerName || jwtPayload?.name || null,
+            isTest: isTest ? 1 : 0,
+          })
+          .catch((err) => {
+            // FK constraint will fail if org doesn't exist
+            console.error("❌ [Chat API] Insert failed:", err);
+            return null;
+          }),
         db.query.organizations.findFirst({
           where: eq(organizations.id, orgId),
         }),
@@ -150,17 +146,32 @@ export const POST = async (req: NextRequest) => {
 
     const messages = [...history, message];
 
-    const customPrompt = typeof organization.prompt === "string" ? organization.prompt : null;
+    const customPrompt =
+      typeof organization.prompt === "string" ? organization.prompt : null;
     const tools = createChatTools(actualChatId, organization.id, 2);
 
-    const basePrompt = customPrompt || 'You are a friendly and professional AI receptionist for a dental clinic. You help patients learn about dental services, check appointment availability, and book appointments. Be warm, reassuring, and informative. When a patient wants to book, collect their name, preferred date and time, and which service they need. Always check availability before confirming a booking.';
-    const systemPrompt = basePrompt
+    const basePrompt =
+      customPrompt ||
+      "You are a friendly and professional AI receptionist for a dental clinic. You help patients learn about dental services, check appointment availability, and book appointments. Be warm, reassuring, and informative.";
+    const now = new Date();
+    const toolInstructions = `
+
+IMPORTANT INSTRUCTIONS — you MUST follow these:
+- Current date and time: ${now.toISOString()} (${now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}, ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}). Use this to understand relative dates like "today", "tomorrow", "next Monday", etc.
+- You have tools available: listServices, checkAvailability, createBooking, lookupBooking, updateBooking. You MUST use them — never pretend to do something without calling the actual tool.
+- To book an appointment: collect patient's full name, phone number, preferred date/time and service, then call checkAvailability, then call createBooking. Do NOT say a booking is made unless createBooking returned success.
+- For createBooking arguments, use: patientName, patientPhone, date, time, and optional serviceId (or serviceName) and notes.
+- To look up a booking: ALWAYS ask for both the patient's name AND phone number. Pass both to lookupBooking — some bookings may not have a phone stored.
+- To reschedule: call lookupBooking (with both name and phone) first to find the booking, then call updateBooking with action "reschedule".
+- To cancel: call lookupBooking (with both name and phone) first, then call updateBooking with action "cancel".
+- NEVER hallucinate or fabricate booking confirmations. NEVER say you "forwarded to admin" — use the tools directly.`;
+    const systemPrompt = `${basePrompt}\n${toolInstructions}`;
 
     timings.preStream = performance.now() - startTime;
     const streamStart = performance.now();
 
     const result = streamText({
-      model: 'google/gemini-3-flash',
+      model: "anthropic/claude-haiku-4.5",
       messages: convertToModelMessages(messages),
       system: systemPrompt,
       tools,
@@ -192,18 +203,22 @@ export const POST = async (req: NextRequest) => {
           chatId: actualChatId,
           isNewChat: id === "_" || !timings.chatLookup,
           timings: Object.fromEntries(
-            Object.entries(timings).map(([k, v]) =>
-              [k, typeof v === 'number' ? `${v.toFixed(1)}ms` : v]
-            )
+            Object.entries(timings).map(([k, v]) => [
+              k,
+              typeof v === "number" ? `${v.toFixed(1)}ms` : v,
+            ]),
           ),
         });
       },
     });
 
-    console.log(`⏱️ [Chat API] TTFB: ${(timings.preStream as number).toFixed(1)}ms`, {
-      chatId: actualChatId,
-      isNewChat: id === "_" || !timings.chatLookup,
-    });
+    console.log(
+      `⏱️ [Chat API] TTFB: ${(timings.preStream as number).toFixed(1)}ms`,
+      {
+        chatId: actualChatId,
+        isNewChat: id === "_" || !timings.chatLookup,
+      },
+    );
 
     return createCORSStreamResponse(response);
   } catch (error) {

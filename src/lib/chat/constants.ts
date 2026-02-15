@@ -19,6 +19,11 @@ export function filterToolExecutionFromResponse(text: string): string {
 
   filteredText = filteredText.replace(/thought\s+[^.!?]+[.!?]/g, "");
 
+  // Detect and truncate repetitive character/emoji spam (e.g. 🦷🦷🦷🦷...)
+  filteredText = filteredText.replace(/(.)\1{19,}/g, "$1$1$1");
+  // Also catch repeated multi-char sequences (emoji are multi-codepoint)
+  filteredText = filteredText.replace(/(.{1,4})\1{9,}/g, "$1$1$1");
+
   // Clean up excessive spaces within lines, but preserve newlines for markdown
   filteredText = filteredText.replace(/[^\S\n]+/g, " ").trim();
 

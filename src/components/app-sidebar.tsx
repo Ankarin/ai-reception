@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, Suspense } from "react";
 
 import { useAuth } from "@clerk/nextjs";
-import { BarChart3, MessageSquare, Settings, Search, Clock, ArrowUpDown, Stethoscope, CalendarDays } from "lucide-react";
+import { BarChart3, MessageSquare, Settings, Search, Clock, ArrowUpDown, Stethoscope, CalendarDays, Plug } from "lucide-react";
 
 import {
   Sidebar,
@@ -131,6 +131,17 @@ function AppSidebarContent() {
                     <span>{t.sidebar.chats}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                {orgRole === "org:admin" && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={() => router.push("/dashboard/integrations")}
+                      isActive={pathname === "/dashboard/integrations"}
+                    >
+                      <Plug className="h-4 w-4" />
+                      <span>{t.integrations.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

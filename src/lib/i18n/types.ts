@@ -207,6 +207,61 @@ export interface Dictionary {
     totalChats: string;
     messagesTotal: string;
   };
+  integrations: {
+    title: string;
+    subtitle: string;
+    webhookUrl: string;
+    copied: string;
+    copyUrl: string;
+    enabled: string;
+    disabled: string;
+    saveSettings: string;
+    savingSettings: string;
+    settingsSaved: string;
+    settingsSaveError: string;
+    webhookSecretLabel: string;
+    webhookSecretHint: string;
+    generateSecret: string;
+    regenerateSecret: string;
+    securityNotice: string;
+    securityNoticeDetail: string;
+    telegram: {
+      title: string;
+      description: string;
+      step1: string;
+      step1Detail: string;
+      step2: string;
+      step2Detail: string;
+      step3: string;
+      step3Detail: string;
+      botToken: string;
+      botTokenPlaceholder: string;
+      setWebhookCommand: string;
+    };
+    email: {
+      title: string;
+      description: string;
+      step1: string;
+      step1Detail: string;
+      step2: string;
+      step2Detail: string;
+      step3: string;
+      step3Detail: string;
+      resendApiKey: string;
+      resendApiKeyPlaceholder: string;
+    };
+    elevenlabs: {
+      title: string;
+      description: string;
+      step1: string;
+      step1Detail: string;
+      step2: string;
+      step2Detail: string;
+      step3: string;
+      step3Detail: string;
+      payloadFormat: string;
+    };
+  };
   widget: {
     startNewChat: string;
     close: string;

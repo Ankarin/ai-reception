@@ -99,6 +99,31 @@ export const widgetSettings = pgTable("widget_settings", {
 });
 
 
+export const integrationSettings = pgTable("integration_settings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: text("organization_id")
+    .references(() => organizations.id, { onDelete: "cascade" })
+    .notNull()
+    .unique(),
+
+  // Telegram
+  telegramBotToken: text("telegram_bot_token"),
+  telegramEnabled: integer("telegram_enabled").default(0).notNull(),
+
+  // Email (Resend)
+  resendApiKey: text("resend_api_key"),
+  emailEnabled: integer("email_enabled").default(0).notNull(),
+
+  // ElevenLabs
+  elevenlabsEnabled: integer("elevenlabs_enabled").default(0).notNull(),
+
+  // Per-org webhook secret
+  webhookSecret: text("webhook_secret"),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const services = pgTable("services", {
   id: uuid("id").primaryKey().defaultRandom(),
   organizationId: text("organization_id")
@@ -154,6 +179,10 @@ export const organizationsRelations = relations(
       fields: [organizations.id],
       references: [widgetSettings.organizationId],
     }),
+    integrationSettings: one(integrationSettings, {
+      fields: [organizations.id],
+      references: [integrationSettings.organizationId],
+    }),
     services: many(services),
     bookings: many(bookings),
   }),
@@ -162,6 +191,13 @@ export const organizationsRelations = relations(
 export const widgetSettingsRelations = relations(widgetSettings, ({ one }) => ({
   organization: one(organizations, {
     fields: [widgetSettings.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const integrationSettingsRelations = relations(integrationSettings, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [integrationSettings.organizationId],
     references: [organizations.id],
   }),
 }));
