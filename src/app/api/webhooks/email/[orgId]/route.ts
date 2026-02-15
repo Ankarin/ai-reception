@@ -256,10 +256,9 @@ IMPORTANT INSTRUCTIONS — you MUST follow these:
       "Дякуємо за ваше звернення. Ми отримали лист і повернемося з деталями найближчим часом.";
 
     const senderEmail = extractFirstEmail(inbound.from);
-    const replyFromEmail =
-      extractFirstEmail(inbound.to) ||
-      extractFirstEmail(process.env.RESEND_FROM_EMAIL) ||
-      null;
+    const configuredReplyFrom = extractFirstEmail(process.env.RESEND_FROM_EMAIL);
+    const inboundRecipient = extractFirstEmail(inbound.to);
+    const replyFromEmail = configuredReplyFrom || inboundRecipient || null;
 
     let replySent = false;
     let replyError: string | null = null;
@@ -270,7 +269,7 @@ IMPORTANT INSTRUCTIONS — you MUST follow these:
       replyError = `Unable to parse sender email from "${inbound.from}"`;
     } else if (!replyFromEmail) {
       replyError =
-        "Unable to determine sender address for reply. Configure RESEND_FROM_EMAIL or ensure inbound 'to' address is present.";
+        "Unable to determine sender address for reply. Configure RESEND_FROM_EMAIL with a verified Resend sender address.";
     } else {
       const sendResult = await sendResendReply({
         apiKey: resendApiKey,
