@@ -258,10 +258,18 @@ export default function IntegrationsPage() {
         emailEnabled: emailEnabled ? 1 : 0,
         elevenlabsEnabled: elevenlabsEnabled ? 1 : 0,
         webhookSecret: secret,
+        baseUrl: baseUrl || undefined,
         ...overrides,
       });
 
       if (data.webhookSecret) setWebhookSecret(data.webhookSecret);
+
+      if (data.telegramWebhookSync && !data.telegramWebhookSync.success) {
+        const syncError =
+          data.telegramWebhookSync.error ||
+          "Unable to sync Telegram webhook automatically.";
+        toast.error(`Telegram webhook sync failed: ${syncError}`);
+      }
 
       toast.success(t.integrations.settingsSaved);
     } catch (error) {

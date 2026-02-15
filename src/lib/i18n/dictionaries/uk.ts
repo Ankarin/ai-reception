@@ -231,10 +231,10 @@ export const uk: Dictionary = {
       step2: "2. Введіть токен бота",
       step2Detail: "Вставте токен, отриманий від BotFather.",
       step3: "3. Зареєструйте вебхук",
-      step3Detail: "Виконайте цю команду, щоб вказати Telegram куди надсилати оновлення:",
+      step3Detail: "Синхронізація вебхука виконується автоматично при збереженні налаштувань. Використовуйте цю команду лише як резервний варіант:",
       botToken: "Токен бота",
       botTokenPlaceholder: "123456789:ABCdefGhIJKlmNoPQRstuVWXyz",
-      setWebhookCommand: "Команда встановлення вебхука",
+      setWebhookCommand: "Резервна команда встановлення вебхука",
     },
     email: {
       title: "Email",

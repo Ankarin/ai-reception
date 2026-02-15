@@ -231,10 +231,10 @@ export const en: Dictionary = {
       step2: "2. Enter Bot Token",
       step2Detail: "Paste the token you received from BotFather.",
       step3: "3. Register the Webhook",
-      step3Detail: "Run this command to tell Telegram where to send updates:",
+      step3Detail: "Webhook sync runs automatically when you save settings. Use this command only as a fallback:",
       botToken: "Bot Token",
       botTokenPlaceholder: "123456789:ABCdefGhIJKlmNoPQRstuVWXyz",
-      setWebhookCommand: "Set Webhook Command",
+      setWebhookCommand: "Manual Fallback Command",
     },
     email: {
       title: "Email",
