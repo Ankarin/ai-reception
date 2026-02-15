@@ -192,7 +192,29 @@ async function sendTelegramMessage(botToken: string, chatId: number, text: strin
       continue;
     }
 
-    // Fallback for formatting errors: resend plain text when Markdown parsing fails.
+    const markdownV2Text = formatForTelegramMarkdownV2(chunk);
+    const markdownV2Response = await fetch(
+      `https://api.telegram.org/bot${botToken}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: markdownV2Text,
+          parse_mode: "MarkdownV2",
+        }),
+      },
+    );
+
+    const markdownV2Result = (await markdownV2Response
+      .json()
+      .catch(() => null)) as { ok?: boolean; description?: string } | null;
+
+    if (markdownV2Response.ok && markdownV2Result?.ok) {
+      continue;
+    }
+
+    // Final fallback when both Markdown parsers fail.
     const plainResponse = await fetch(
       `https://api.telegram.org/bot${botToken}/sendMessage`,
       {
@@ -213,10 +235,41 @@ async function sendTelegramMessage(botToken: string, chatId: number, text: strin
       console.error("[Telegram] sendMessage failed", {
         chatId,
         markdownError: markdownResult?.description || "unknown",
+        markdownV2Error: markdownV2Result?.description || "unknown",
         plainError: plainResult?.description || "unknown",
       });
     }
   }
+}
+
+function formatForTelegramMarkdownV2(input: string): string {
+  // Convert common markdown to Telegram-friendly structure while preserving emphasis.
+  let text = input.replace(/\r\n/g, "\n");
+
+  // Telegram markdown rendering for links can be fragile; keep URL visible as plain text.
+  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, "$1 ($2)");
+
+  // Normalize list markers for more stable rendering.
+  text = text.replace(/^(\s*)[-*]\s+/gm, "$1• ");
+
+  const boldTokens: string[] = [];
+  text = text.replace(/\*\*([^*]+)\*\*/g, (_match, value: string) => {
+    const idx = boldTokens.push(value) - 1;
+    return `@@B${idx}@@`;
+  });
+
+  const escaped = escapeTelegramMarkdownV2(text);
+
+  return escaped.replace(/@@B(\d+)@@/g, (_match, idxStr: string) => {
+    const idx = Number.parseInt(idxStr, 10);
+    const value = boldTokens[idx] ?? "";
+    return `*${escapeTelegramMarkdownV2(value)}*`;
+  });
+}
+
+function escapeTelegramMarkdownV2(input: string): string {
+  // Reserved symbols in Telegram MarkdownV2.
+  return input.replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, "\\$1");
 }
 
 function splitMessage(text: string, maxLength: number): string[] {
