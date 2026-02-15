@@ -171,31 +171,50 @@ async function sendTelegramMessage(botToken: string, chatId: number, text: strin
   const chunks = splitMessage(text, 4096);
 
   for (const chunk of chunks) {
-    try {
-      await fetch(
-        `https://api.telegram.org/bot${botToken}/sendMessage`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text: chunk,
-            parse_mode: "Markdown",
-          }),
-        },
-      );
-    } catch {
-      await fetch(
-        `https://api.telegram.org/bot${botToken}/sendMessage`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text: chunk,
-          }),
-        },
-      );
+    const markdownResponse = await fetch(
+      `https://api.telegram.org/bot${botToken}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: chunk,
+          parse_mode: "Markdown",
+        }),
+      },
+    );
+
+    const markdownResult = (await markdownResponse
+      .json()
+      .catch(() => null)) as { ok?: boolean; description?: string } | null;
+
+    if (markdownResponse.ok && markdownResult?.ok) {
+      continue;
+    }
+
+    // Fallback for formatting errors: resend plain text when Markdown parsing fails.
+    const plainResponse = await fetch(
+      `https://api.telegram.org/bot${botToken}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: chunk,
+        }),
+      },
+    );
+
+    const plainResult = (await plainResponse
+      .json()
+      .catch(() => null)) as { ok?: boolean; description?: string } | null;
+
+    if (!(plainResponse.ok && plainResult?.ok)) {
+      console.error("[Telegram] sendMessage failed", {
+        chatId,
+        markdownError: markdownResult?.description || "unknown",
+        plainError: plainResult?.description || "unknown",
+      });
     }
   }
 }
