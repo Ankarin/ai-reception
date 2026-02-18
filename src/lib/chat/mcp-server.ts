@@ -39,7 +39,7 @@ export function createMcpServer(organizationId: string): McpServer {
 
   server.tool(
     "listServices",
-    "List all available services with prices and durations. Use when a patient asks about services, treatments, pricing, or what the clinic offers.",
+    "List all available services with prices and durations. MUST be called before booking to get real service names. NEVER guess or invent service names — only use names returned by this tool.",
     {},
     async () => {
       const allServices = await db
@@ -68,7 +68,7 @@ export function createMcpServer(organizationId: string): McpServer {
 
   server.tool(
     "checkAvailability",
-    "Check available appointment time slots for a given date. Use when a patient wants to book or asks about availability. Working hours: Mon-Fri 09:00-19:00, Sat 10:00-16:00, Sun — closed.",
+    "Check available appointment time slots for a given date. MUST be called before creating any booking. NEVER guess available times — only use slots returned by this tool. Date must be YYYY-MM-DD format. Working hours: Mon-Fri 09:00-19:00, Sat 10:00-16:00, Sun — closed.",
     { date: z.string().describe("The date to check in YYYY-MM-DD format") },
     async ({ date }) => {
       const dayOfWeek = new Date(date).getDay();
@@ -142,7 +142,7 @@ export function createMcpServer(organizationId: string): McpServer {
 
   server.tool(
     "createBooking",
-    "Create a new appointment booking. You MUST have the patient's name, phone number, date, and time before calling this. Always ask for the phone number if not provided.",
+    "Create a new appointment booking. REQUIRED steps BEFORE calling: 1) Call listServices to get valid service names. 2) Call checkAvailability for the desired date to confirm the slot is free. 3) Collect patient full name AND phone number — ask if not provided. NEVER call this without completing all 3 steps. serviceName MUST match a name from listServices exactly. Date format: YYYY-MM-DD. Time format: HH:MM.",
     {
       patientName: z.string().describe("Full name of the patient"),
       patientPhone: z.string().describe("Patient phone number"),
@@ -323,16 +323,15 @@ export function createMcpServer(organizationId: string): McpServer {
 
   server.tool(
     "lookupBooking",
-    "Look up existing bookings by patient name and/or phone number. Use when a patient wants to check, cancel, or reschedule an appointment.",
+    "Look up existing bookings. ALWAYS ask for the patient's NAME and search by name. Phone is ONLY a last-resort fallback if the patient cannot provide their name. NEVER skip asking for the name. Returns booking IDs needed for updateBooking.",
     {
       patientName: z
         .string()
-        .optional()
-        .describe("Patient name to search for"),
+        .describe("Patient name to search for — REQUIRED, always ask for the name"),
       patientPhone: z
         .string()
         .optional()
-        .describe("Patient phone to search for"),
+        .describe("Patient phone — only used as fallback if name is not available"),
     },
     async ({ patientName, patientPhone }) => {
       const resolvedName = (patientName || "").trim();
@@ -340,13 +339,11 @@ export function createMcpServer(organizationId: string): McpServer {
 
       let results: any[] = [];
 
-      if (resolvedPhone) {
-        const digits = resolvedPhone.replace(/\D/g, "");
-        const suffix = digits.length > 9 ? digits.slice(-9) : digits;
+      if (resolvedName) {
         results = await db.query.bookings.findMany({
           where: and(
             eq(bookings.organizationId, organizationId),
-            sql`regexp_replace(${bookings.patientPhone}, '\\D', '', 'g') LIKE ${"%" + suffix}`,
+            ilike(bookings.patientName, `%${resolvedName}%`),
           ),
           with: { service: true },
           orderBy: (bookings, { desc }) => [desc(bookings.date)],
@@ -354,11 +351,13 @@ export function createMcpServer(organizationId: string): McpServer {
         });
       }
 
-      if (results.length === 0 && resolvedName) {
+      if (results.length === 0 && resolvedPhone) {
+        const digits = resolvedPhone.replace(/\D/g, "");
+        const suffix = digits.length > 9 ? digits.slice(-9) : digits;
         results = await db.query.bookings.findMany({
           where: and(
             eq(bookings.organizationId, organizationId),
-            ilike(bookings.patientName, `%${resolvedName}%`),
+            sql`regexp_replace(${bookings.patientPhone}, '\\D', '', 'g') LIKE ${"%" + suffix}`,
           ),
           with: { service: true },
           orderBy: (bookings, { desc }) => [desc(bookings.date)],
@@ -385,7 +384,7 @@ export function createMcpServer(organizationId: string): McpServer {
 
   server.tool(
     "updateBooking",
-    "Update an existing booking — reschedule to a new date/time or cancel it. Use lookupBooking first to find the booking ID. When rescheduling, check availability for the new date first.",
+    "Reschedule or cancel an existing booking. REQUIRED steps: 1) Call lookupBooking by patient NAME to get the booking ID. 2) For rescheduling: call checkAvailability for the new date BEFORE calling this. 3) Pass the exact bookingId from lookupBooking results. NEVER guess booking IDs. For cancel: action='cancel'. For reschedule: action='reschedule' with newDate (YYYY-MM-DD) and newTime (HH:MM).",
     {
       bookingId: z.string().describe("The ID of the booking to update"),
       action: z

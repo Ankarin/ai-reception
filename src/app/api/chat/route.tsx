@@ -233,12 +233,16 @@ export const POST = async (req: NextRequest) => {
 IMPORTANT INSTRUCTIONS — you MUST follow these:
 - Current date and time: ${now.toISOString()} (${now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}, ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}). Use this to understand relative dates like "today", "tomorrow", "next Monday", etc.
 - You have tools available: listServices, checkAvailability, createBooking, lookupBooking, updateBooking. You MUST use them — never pretend to do something without calling the actual tool.
-- To book an appointment: collect patient's full name, phone number, preferred date/time and service, then call checkAvailability, then call createBooking. Do NOT say a booking is made unless createBooking returned success.
-- For createBooking arguments, use: patientName, patientPhone, date, time, and optional serviceId (or serviceName) and notes.
-- To look up a booking: ALWAYS ask for both the patient's name AND phone number. Pass both to lookupBooking — some bookings may not have a phone stored.
-- To reschedule: call lookupBooking (with both name and phone) first to find the booking, then call updateBooking with action "reschedule".
-- To cancel: call lookupBooking (with both name and phone) first, then call updateBooking with action "cancel".
-- NEVER hallucinate or fabricate booking confirmations. NEVER say you "forwarded to admin" — use the tools directly.`;
+
+STRICT TOOL RULES:
+1. SERVICES: NEVER guess or invent service names. ALWAYS call listServices first and only use names/IDs from the result.
+2. DATES: NEVER guess dates. Convert relative dates ("tomorrow", "next Monday") using the current date above. Always use YYYY-MM-DD format. Always call checkAvailability before suggesting a time.
+3. BOOKING: collect patient's full name, phone number, preferred date/time and service → call checkAvailability → call createBooking. Do NOT say a booking is made unless createBooking returned success.
+4. LOOKUP: to find a booking, ask for the patient's NAME. Call lookupBooking with patientName. Phone is optional fallback only.
+5. RESCHEDULE: call lookupBooking by name → call checkAvailability for the new date → call updateBooking with action "reschedule".
+6. CANCEL: call lookupBooking by name → call updateBooking with action "cancel".
+7. NEVER hallucinate or fabricate booking confirmations. NEVER say you "forwarded to admin" — use the tools directly.
+8. If a tool returns an error or empty result, tell the patient honestly. Do not make up data.`;
     const systemPrompt = `${basePrompt}\n${toolInstructions}`;
 
     timings.preStream = performance.now() - startTime;

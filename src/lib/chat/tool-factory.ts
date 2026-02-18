@@ -313,17 +313,16 @@ export function createChatTools(
 
     lookupBooking: tool({
       description:
-        "Look up existing bookings by patient name and/or phone number. Use when a patient wants to check, cancel, or reschedule an appointment. ALWAYS provide both name and phone if you have them — some bookings may only have a name without phone.",
+        "Look up existing bookings by patient name. Use when a patient wants to check, cancel, or reschedule an appointment. ALWAYS search by name first. Only fall back to phone if name is not available.",
       inputSchema: z.object({
         patientName: z
           .string()
-          .optional()
-          .describe("Patient name to search for — ALWAYS include if known"),
+          .describe("Patient name to search for — REQUIRED, always ask for the name"),
         name: z.string().optional().describe("Alias for patientName"),
         patientPhone: z
           .string()
           .optional()
-          .describe("Patient phone to search for"),
+          .describe("Patient phone — only used as fallback if name is not available"),
         phone: z.string().optional().describe("Alias for patientPhone"),
       }),
       execute: async ({ patientName, name, patientPhone, phone }) => {
@@ -336,14 +335,11 @@ export function createChatTools(
         });
         let results: any[] = [];
 
-        if (resolvedPatientPhone) {
-          // Strip non-digits for comparison to handle +380, spaces, dashes etc.
-          const digits = resolvedPatientPhone.replace(/\D/g, "");
-          const suffix = digits.length > 9 ? digits.slice(-9) : digits;
+        if (resolvedPatientName) {
           results = await db.query.bookings.findMany({
             where: and(
               eq(bookings.organizationId, organizationId),
-              sql`regexp_replace(${bookings.patientPhone}, '\\D', '', 'g') LIKE ${'%' + suffix}`,
+              ilike(bookings.patientName, `%${resolvedPatientName}%`),
             ),
             with: { service: true },
             orderBy: (bookings, { desc }) => [desc(bookings.date)],
@@ -351,11 +347,13 @@ export function createChatTools(
           });
         }
 
-        if (results.length === 0 && resolvedPatientName) {
+        if (results.length === 0 && resolvedPatientPhone) {
+          const digits = resolvedPatientPhone.replace(/\D/g, "");
+          const suffix = digits.length > 9 ? digits.slice(-9) : digits;
           results = await db.query.bookings.findMany({
             where: and(
               eq(bookings.organizationId, organizationId),
-              ilike(bookings.patientName, `%${resolvedPatientName}%`),
+              sql`regexp_replace(${bookings.patientPhone}, '\\D', '', 'g') LIKE ${'%' + suffix}`,
             ),
             with: { service: true },
             orderBy: (bookings, { desc }) => [desc(bookings.date)],
