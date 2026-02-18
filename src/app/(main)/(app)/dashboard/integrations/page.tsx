@@ -293,7 +293,7 @@ export default function IntegrationsPage() {
 
   const telegramWebhookUrl = `${baseUrl}/api/webhooks/telegram/${orgId}`;
   const emailWebhookUrl = `${baseUrl}/api/webhooks/email/${orgId}`;
-  const elevenlabsWebhookUrl = `${baseUrl}/api/webhooks/elevenlabs/${orgId}`;
+  const mcpServerUrl = `${baseUrl}/api/mcp/${orgId}`;
   const telegramWebhookUrlWithSecret = withWebhookSecret(
     telegramWebhookUrl,
     webhookSecret,
@@ -302,28 +302,14 @@ export default function IntegrationsPage() {
     emailWebhookUrl,
     webhookSecret,
   );
-  const elevenlabsWebhookUrlWithSecret = withWebhookSecret(
-    elevenlabsWebhookUrl,
+  const mcpServerUrlWithSecret = withWebhookSecret(
+    mcpServerUrl,
     webhookSecret,
   );
 
   const setWebhookCurl = `curl -X POST "https://api.telegram.org/bot${telegramBotToken || "<YOUR_BOT_TOKEN>"}/setWebhook" \\
   -H "Content-Type: application/json" \\
   -d '{"url": "${telegramWebhookUrlWithSecret || "<YOUR_TELEGRAM_WEBHOOK_URL_WITH_SECRET>"}"}'`;
-
-  const elevenlabsPayload = `{
-  "call_id": "abc123",
-  "transcript": "...",
-  "extracted_data": {
-    "booking": {
-      "patient_name": "John Smith",
-      "patient_phone": "+1234567890",
-      "date": "2026-03-15",
-      "time": "10:00",
-      "service_name": "Teeth Cleaning"
-    }
-  }
-}`;
 
   if (!orgId) return null;
 
@@ -532,24 +518,7 @@ export default function IntegrationsPage() {
           title={t.integrations.elevenlabs.step2}
           detail={t.integrations.elevenlabs.step2Detail}
         >
-          <WebhookUrlDisplay url={elevenlabsWebhookUrlWithSecret} label={t.integrations.webhookUrl} />
-        </StepBlock>
-
-        <StepBlock
-          title={t.integrations.elevenlabs.step3}
-          detail={t.integrations.elevenlabs.step3Detail}
-        >
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium text-muted-foreground">
-              {t.integrations.elevenlabs.payloadFormat}
-            </p>
-            <CodeBlock>{elevenlabsPayload}</CodeBlock>
-          </div>
-          <div className="mt-2">
-            <Badge variant="secondary" className="text-xs">
-              source: "elevenlabs"
-            </Badge>
-          </div>
+          <WebhookUrlDisplay url={mcpServerUrlWithSecret} label={t.integrations.elevenlabs.mcpServerUrl} />
         </StepBlock>
       </IntegrationCard>
     </div>

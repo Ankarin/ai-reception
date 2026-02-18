@@ -257,9 +257,7 @@ export interface Dictionary {
       step1Detail: string;
       step2: string;
       step2Detail: string;
-      step3: string;
-      step3Detail: string;
-      payloadFormat: string;
+      mcpServerUrl: string;
     };
   };
   widget: {
