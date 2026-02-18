@@ -39,7 +39,7 @@ export function createMcpServer(organizationId: string): McpServer {
 
   server.tool(
     "listServices",
-    "List all available services with prices and durations. MUST be called before booking to get real service names. NEVER guess or invent service names — only use names returned by this tool.",
+    "Returns all active services with prices and durations. Call silently before any booking.",
     {},
     async () => {
       const allServices = await db
@@ -68,7 +68,7 @@ export function createMcpServer(organizationId: string): McpServer {
 
   server.tool(
     "checkAvailability",
-    "Check available appointment time slots for a given date. MUST be called before creating any booking. NEVER guess available times — only use slots returned by this tool. Date must be YYYY-MM-DD format. Working hours: Mon-Fri 09:00-19:00, Sat 10:00-16:00, Sun — closed.",
+    "Returns available time slots for a date. Call silently before booking. Date format: YYYY-MM-DD.",
     { date: z.string().describe("The date to check in YYYY-MM-DD format") },
     async ({ date }) => {
       const dayOfWeek = new Date(date).getDay();
@@ -142,7 +142,7 @@ export function createMcpServer(organizationId: string): McpServer {
 
   server.tool(
     "createBooking",
-    "Create a new appointment booking. REQUIRED steps BEFORE calling: 1) Call listServices to get valid service names. 2) Call checkAvailability for the desired date to confirm the slot is free. 3) Collect patient full name AND phone number — ask if not provided. NEVER call this without completing all 3 steps. serviceName MUST match a name from listServices exactly. Date format: YYYY-MM-DD. Time format: HH:MM.",
+    "Creates an appointment. Requires patient name, phone, date (YYYY-MM-DD), time (HH:MM). Call listServices and checkAvailability first.",
     {
       patientName: z.string().describe("Full name of the patient"),
       patientPhone: z.string().describe("Patient phone number"),
@@ -323,7 +323,7 @@ export function createMcpServer(organizationId: string): McpServer {
 
   server.tool(
     "lookupBooking",
-    "Look up existing bookings. ALWAYS ask for the patient's NAME and search by name. Phone is ONLY a last-resort fallback if the patient cannot provide their name. NEVER skip asking for the name. Returns booking IDs needed for updateBooking.",
+    "Finds existing bookings by patient name. Returns booking IDs for use with updateBooking.",
     {
       patientName: z
         .string()
@@ -384,7 +384,7 @@ export function createMcpServer(organizationId: string): McpServer {
 
   server.tool(
     "updateBooking",
-    "Reschedule or cancel an existing booking. REQUIRED steps: 1) Call lookupBooking by patient NAME to get the booking ID. 2) For rescheduling: call checkAvailability for the new date BEFORE calling this. 3) Pass the exact bookingId from lookupBooking results. NEVER guess booking IDs. For cancel: action='cancel'. For reschedule: action='reschedule' with newDate (YYYY-MM-DD) and newTime (HH:MM).",
+    "Reschedules or cancels a booking. Use lookupBooking first to get the bookingId. For reschedule: check availability for new date first.",
     {
       bookingId: z.string().describe("The ID of the booking to update"),
       action: z
