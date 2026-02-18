@@ -28,13 +28,14 @@ const isPublicRoute = createRouteMatcher([
 ]);
 const isCronRoute = createRouteMatcher(["/api/cron/(.*)"]);
 const isWebhookRoute = createRouteMatcher(["/api/webhooks/(.*)"]);
+const isMcpRoute = createRouteMatcher(["/api/mcp/(.*)"]);
 const isOrgRoute = createRouteMatcher([
   "/:orgId/dashboard(.*)",
   "/:orgId/widget-settings(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-  if (isCronRoute(req) || isWebhookRoute(req)) {
+  if (isCronRoute(req) || isWebhookRoute(req) || isMcpRoute(req)) {
     return NextResponse.next();
   }
 
