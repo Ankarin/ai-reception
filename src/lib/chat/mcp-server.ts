@@ -38,6 +38,151 @@ export function createMcpServer(organizationId: string): McpServer {
   });
 
   server.tool(
+    "resolveDate",
+    "Converts a relative date expression to YYYY-MM-DD. Use for 'tomorrow', 'next Friday', 'in 3 days', etc.",
+    {
+      expression: z
+        .string()
+        .describe(
+          "Relative date in English: 'tomorrow', 'next monday', 'next friday', 'in 3 days', 'this saturday', etc.",
+        ),
+    },
+    async ({ expression }) => {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const expr = expression.toLowerCase().trim();
+
+      const dayMap: Record<string, number> = {
+        sunday: 0, sun: 0,
+        monday: 1, mon: 1,
+        tuesday: 2, tue: 2,
+        wednesday: 3, wed: 3,
+        thursday: 4, thu: 4,
+        friday: 5, fri: 5,
+        saturday: 6, sat: 6,
+      };
+
+      let resolved: Date | null = null;
+
+      if (expr === "today" || expr === "сьогодні" || expr === "сегодня") {
+        resolved = today;
+      } else if (expr === "tomorrow" || expr === "завтра") {
+        resolved = new Date(today);
+        resolved.setDate(resolved.getDate() + 1);
+      } else if (expr === "day after tomorrow" || expr === "післязавтра" || expr === "послезавтра") {
+        resolved = new Date(today);
+        resolved.setDate(resolved.getDate() + 2);
+      } else {
+        // "in N days"
+        const inDaysMatch = expr.match(/in\s+(\d+)\s+days?/);
+        if (inDaysMatch) {
+          resolved = new Date(today);
+          resolved.setDate(resolved.getDate() + parseInt(inDaysMatch[1]));
+        }
+
+        // "через N днів/дней"
+        const cherezMatch = expr.match(/через\s+(\d+)\s+(дн|день|дні)/);
+        if (!resolved && cherezMatch) {
+          resolved = new Date(today);
+          resolved.setDate(resolved.getDate() + parseInt(cherezMatch[1]));
+        }
+
+        // "next <day>" or "this <day>"
+        if (!resolved) {
+          for (const [name, target] of Object.entries(dayMap)) {
+            if (expr.includes(name)) {
+              const current = today.getDay();
+              let diff = target - current;
+              if (expr.includes("next")) {
+                if (diff <= 0) diff += 7;
+              } else {
+                // "this" — same week, but if already passed go to next week
+                if (diff <= 0) diff += 7;
+              }
+              resolved = new Date(today);
+              resolved.setDate(resolved.getDate() + diff);
+              break;
+            }
+          }
+        }
+
+        // Ukrainian day names
+        const uaDayMap: Record<string, number> = {
+          "неділ": 0, "понеділ": 1, "вівтор": 2, "серед": 3,
+          "четвер": 4, "п'ятниц": 5, "пятниц": 5, "субот": 6,
+        };
+        if (!resolved) {
+          for (const [prefix, target] of Object.entries(uaDayMap)) {
+            if (expr.includes(prefix)) {
+              const current = today.getDay();
+              let diff = target - current;
+              if (diff <= 0) diff += 7;
+              resolved = new Date(today);
+              resolved.setDate(resolved.getDate() + diff);
+              break;
+            }
+          }
+        }
+
+        // Russian day names
+        const ruDayMap: Record<string, number> = {
+          "воскресен": 0, "понедельник": 1, "вторник": 2, "сред": 3,
+          "четверг": 4, "пятниц": 5, "суббот": 6,
+        };
+        if (!resolved) {
+          for (const [prefix, target] of Object.entries(ruDayMap)) {
+            if (expr.includes(prefix)) {
+              const current = today.getDay();
+              let diff = target - current;
+              if (diff <= 0) diff += 7;
+              resolved = new Date(today);
+              resolved.setDate(resolved.getDate() + diff);
+              break;
+            }
+          }
+        }
+      }
+
+      if (!resolved) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({
+                success: false,
+                message: `Could not resolve "${expression}". Ask the patient for an exact date.`,
+              }),
+            },
+          ],
+        };
+      }
+
+      const yyyy = resolved.getFullYear();
+      const mm = String(resolved.getMonth() + 1).padStart(2, "0");
+      const dd = String(resolved.getDate()).padStart(2, "0");
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+
+      const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const dayNameUa = ["неділя", "понеділок", "вівторок", "середа", "четвер", "п'ятниця", "субота"];
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({
+              success: true,
+              date: dateStr,
+              dayOfWeek: dayNames[resolved.getDay()],
+              dayOfWeekUa: dayNameUa[resolved.getDay()],
+              isWorkday: resolved.getDay() !== 0,
+            }),
+          },
+        ],
+      };
+    },
+  );
+
+  server.tool(
     "listServices",
     "Returns all active services with prices and durations. Call silently before any booking.",
     {},
